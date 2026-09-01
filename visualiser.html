@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Two-Pointer Selection Sort — Visualizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0f1218;
+    --panel: #161b24;
+    --panel-2: #1c222e;
+    --line: #2a3240;
+    --text: #e7ebf2;
+    --dim: #8a94a6;
+    --sptr: #5b8def;
+    --eptr: #3fd6c5;
+    --minptr: #f2a93b;
+    --swap: #ef5b7a;
+    --sorted: #3fb87f;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    line-height: 1.5;
+  }
+  .mono{ font-family: 'IBM Plex Mono', monospace; }
+
+  header{
+    padding: 40px 32px 24px;
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  header h1{
+    font-size: clamp(28px, 4vw, 40px);
+    font-weight: 700;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  header p{
+    color: var(--dim);
+    max-width: 62ch;
+    margin: 0;
+    font-size: 15px;
+  }
+
+  main{
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 32px 64px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 22px;
+  }
+
+  /* --- controls --- */
+  .controls{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .controls input[type="text"]{
+    flex: 1 1 220px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+  }
+  .controls input[type="text"]:focus{ outline: 1px solid var(--sptr); }
+  button{
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 9px 14px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  button:hover{ border-color: var(--sptr); }
+  button:active{ transform: translateY(1px); }
+  button:focus-visible, input:focus-visible{ outline: 2px solid var(--sptr); outline-offset: 1px; }
+  button.primary{
+    background: var(--sptr);
+    border-color: var(--sptr);
+    color: #0b0f16;
+  }
+  button:disabled{ opacity: .4; cursor: not-allowed; }
+  .spacer{ flex: 1 1 auto; }
+  .speed-row{ display:flex; align-items:center; gap:8px; color: var(--dim); font-size: 13px; }
+  .speed-row input[type="range"]{ width: 120px; }
+
+  /* --- bars --- */
+  .stage{
+    height: 300px;
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    padding: 12px 8px 0;
+    position: relative;
+  }
+  .bar-col{
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    position: relative;
+    min-width: 0;
+  }
+  .bar{
+    width: 100%;
+    max-width: 56px;
+    background: #3a4356;
+    border-radius: 4px 4px 2px 2px;
+    transition: height .35s ease, background .25s ease, transform .25s ease;
+    position: relative;
+  }
+  .bar.sptr{ background: var(--sptr); }
+  .bar.eptr{ background: var(--eptr); }
+  .bar.minptr{ background: var(--minptr); }
+  .bar.sorted{ background: var(--sorted); }
+  .bar.swapping{ transform: translateY(-10px); }
+
+  .bar-value{
+    position: absolute;
+    top: -22px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--dim);
+  }
+  .bar-label{
+    margin-top: 8px;
+    height: 34px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+  }
+  .bar-label .idx{ color: var(--dim); }
+  .bar-label .ptr{ font-weight: 600; letter-spacing: .02em; }
+  .bar-label .ptr.sptr{ color: var(--sptr); }
+  .bar-label .ptr.eptr{ color: var(--eptr); }
+  .bar-label .ptr.minptr{ color: var(--minptr); }
+
+  /* --- readout --- */
+  .readout{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .stat{
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .stat .k{ color: var(--dim); font-size: 12px; margin-bottom: 4px; }
+  .stat .v{ font-family: 'IBM Plex Mono', monospace; font-size: 17px; font-weight: 600; }
+  .stat .v.sptr{ color: var(--sptr); }
+  .stat .v.eptr{ color: var(--eptr); }
+  .stat .v.minptr{ color: var(--minptr); }
+
+  .narration{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13.5px;
+    color: var(--text);
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .legend{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--dim);
+  }
+  .legend span{ display:flex; align-items:center; gap:6px; }
+  .swatch{ width: 10px; height: 10px; border-radius: 2px; display:inline-block; }
+
+  @media (prefers-reduced-motion: reduce){
+    .bar, .bar.swapping{ transition: none; }
+  }
+
+  @media (max-width: 640px){
+    .readout{ grid-template-columns: repeat(2, 1fr); }
+    header{ padding: 28px 18px 16px; }
+    main{ padding: 0 18px 48px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Two-Pointer Selection Sort</h1>
+  <p>Each pass sweeps <span class="mono">eptr</span> backward from the end of the array to find the element with the smallest signed difference from <span class="mono">arr[sptr]</span>, then places it — either directly at <span class="mono">sptr</span> or just after it.</p>
+</header>
+
+<main>
+
+  <section class="panel">
+    <div class="controls">
+      <input type="text" id="arrayInput" class="mono" value="5, 2, 9, 1, 7" spellcheck="false" aria-label="Array values, comma separated">
+      <button id="applyBtn">Load array</button>
+      <button id="randomBtn">Randomize</button>
+      <div class="spacer"></div>
+      <div class="speed-row">
+        <label for="speed">Speed</label>
+        <input type="range" id="speed" min="150" max="1400" value="650" step="50">
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="stage" id="stage" aria-label="Sorting visualization"></div>
+  </section>
+
+  <section class="panel">
+    <div class="narration mono" id="narration">Load an array, then press Step or Play.</div>
+  </section>
+
+  <section class="panel">
+    <div class="readout">
+      <div class="stat"><div class="k">pass (sptr)</div><div class="v sptr" id="statSptr">—</div></div>
+      <div class="stat"><div class="k">scan (eptr)</div><div class="v eptr" id="statEptr">—</div></div>
+      <div class="stat"><div class="k">best so far (minptr)</div><div class="v minptr" id="statMin">—</div></div>
+      <div class="stat"><div class="k">min diff</div><div class="v" id="statDiff">—</div></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="controls">
+      <button id="stepBtn">Step</button>
+      <button id="playBtn" class="primary">Play</button>
+      <button id="resetBtn">Reset</button>
+      <div class="spacer"></div>
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--sptr)"></i>sptr — pass start</span>
+        <span><i class="swatch" style="background:var(--eptr)"></i>eptr — scanning</span>
+        <span><i class="swatch" style="background:var(--minptr)"></i>minptr — best candidate</span>
+        <span><i class="swatch" style="background:var(--sorted)"></i>placed</span>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function(){
+  const stage = document.getElementById('stage');
+  const narration = document.getElementById('narration');
+  const statSptr = document.getElementById('statSptr');
+  const statEptr = document.getElementById('statEptr');
+  const statMin = document.getElementById('statMin');
+  const statDiff = document.getElementById('statDiff');
+  const arrayInput = document.getElementById('arrayInput');
+  const speedSlider = document.getElementById('speed');
+
+  let arr = [];
+  let steps = [];       // flattened list of step objects for the whole sort
+  let stepIndex = -1;
+  let playing = false;
+  let playTimer = null;
+
+  // ---------- generate the full step trace for the algorithm ----------
+  function buildSteps(input){
+    const a = input.slice();
+    const trace = [];
+    const n = a.length;
+
+    trace.push({type:'init', arr:a.slice(), text:`Starting array: [${a.join(', ')}]`});
+
+    for(let sptr = 0; sptr < n - 1; sptr++){
+      let eptr = n - 1;
+      let minDiff = a[eptr] - a[sptr];
+      let minptr = eptr;
+
+      trace.push({
+        type:'pass-start', arr:a.slice(), sptr, eptr, minptr, minDiff,
+        text:`Pass sptr=${sptr}: start eptr at last index (${eptr}). diff = arr[${eptr}]-arr[${sptr}] = ${a[eptr]}-${a[sptr]} = ${minDiff}.`
+      });
+
+      eptr--;
+      while(eptr !== sptr){
+        const diff = a[eptr] - a[sptr];
+        const improved = diff < minDiff;
+        if(improved){ minDiff = diff; minptr = eptr; }
+        trace.push({
+          type:'scan', arr:a.slice(), sptr, eptr, minptr, minDiff,
+          text: improved
+            ? `eptr=${eptr}: diff = ${a[eptr]}-${a[sptr]} = ${diff} — new minimum, minptr → ${minptr}.`
+            : `eptr=${eptr}: diff = ${a[eptr]}-${a[sptr]} = ${diff} — not smaller than ${minDiff}, no change.`
+        });
+        eptr--;
+      }
+
+      const swapDirect = a[sptr] > a[minptr];
+      const targetIdx = swapDirect ? sptr : sptr + 1;
+
+      trace.push({
+        type:'decide', arr:a.slice(), sptr, eptr:sptr, minptr, minDiff,
+        text: swapDirect
+          ? `arr[${sptr}]=${a[sptr]} > arr[${minptr}]=${a[minptr]} → swap sptr and minptr directly.`
+          : `arr[${sptr}]=${a[sptr]} ≤ arr[${minptr}]=${a[minptr]} → swap sptr+1 (${sptr+1}) and minptr.`
+      });
+
+      const tmp = a[targetIdx];
+      a[targetIdx] = a[minptr];
+      a[minptr] = tmp;
+
+      trace.push({
+        type:'swap', arr:a.slice(), sptr, swapA:targetIdx, swapB:minptr, placedUpTo: sptr,
+        text:`Swapped index ${targetIdx} and ${minptr} → [${a.join(', ')}]. Index ${sptr} is now placed.`
+      });
+    }
+
+    trace.push({type:'done', arr:a.slice(), placedUpTo: n-1, text:`Done. Sorted: [${a.join(', ')}]`});
+    return trace;
+  }
+
+  // ---------- rendering ----------
+  function render(step){
+    const a = step.arr;
+    const max = Math.max(...a, 1);
+    stage.innerHTML = '';
+
+    const placedUpTo = step.type === 'done' ? a.length - 1
+      : (step.placedUpTo !== undefined ? step.placedUpTo - 1 : (step.sptr !== undefined ? step.sptr - 1 : -1));
+
+    a.forEach((val, i) => {
+      const col = document.createElement('div');
+      col.className = 'bar-col';
+
+      const valueTag = document.createElement('div');
+      valueTag.className = 'bar-value mono';
+      valueTag.textContent = val;
+
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      const h = 18 + (val - Math.min(...a)) / (max - Math.min(...a) + 0.0001) * 210;
+      bar.style.height = Math.max(h, 18) + 'px';
+
+      let roleLabel = '';
+      let roleClass = '';
+
+      if(step.type === 'swap' && (i === step.swapA || i === step.swapB)){
+        bar.classList.add('swapping');
+      }
+
+      if(i <= placedUpTo || step.type === 'done'){
+        bar.classList.add('sorted');
+      } else if(step.minptr === i && (step.type === 'scan' || step.type === 'pass-start' || step.type === 'decide')){
+        bar.classList.add('minptr'); roleClass='minptr'; roleLabel='minptr';
+      } else if(step.eptr === i && (step.type === 'scan' || step.type === 'pass-start')){
+        bar.classList.add('eptr'); roleClass='eptr'; roleLabel='eptr';
+      } else if(step.sptr === i && step.type !== 'init' && step.type !== 'done'){
+        bar.classList.add('sptr'); roleClass='sptr'; roleLabel='sptr';
+      }
+
+      // sptr should still show even if minptr coincides on a different index
+      if(step.sptr === i && roleLabel === '' && step.type !== 'init' && step.type !== 'done'){
+        bar.classList.add('sptr'); roleClass='sptr'; roleLabel='sptr';
+      }
+
+      col.appendChild(valueTag);
+      col.appendChild(bar);
+
+      const label = document.createElement('div');
+      label.className = 'bar-label';
+      const idx = document.createElement('div');
+      idx.className = 'idx';
+      idx.textContent = i;
+      label.appendChild(idx);
+      if(roleLabel){
+        const ptr = document.createElement('div');
+        ptr.className = 'ptr ' + roleClass;
+        ptr.textContent = roleLabel;
+        label.appendChild(ptr);
+      }
+      col.appendChild(label);
+
+      stage.appendChild(col);
+    });
+
+    narration.textContent = step.text;
+    statSptr.textContent = step.sptr !== undefined && step.type !== 'init' && step.type !== 'done' ? step.sptr : '—';
+    statEptr.textContent = (step.type === 'scan' || step.type === 'pass-start') ? step.eptr : '—';
+    statMin.textContent = step.minptr !== undefined && (step.type === 'scan' || step.type === 'pass-start' || step.type === 'decide') ? step.minptr : '—';
+    statDiff.textContent = step.minDiff !== undefined && (step.type === 'scan' || step.type === 'pass-start' || step.type === 'decide') ? step.minDiff : '—';
+  }
+
+  // ---------- controls ----------
+  function loadArray(values){
+    arr = values;
+    steps = buildSteps(arr);
+    stepIndex = 0;
+    render(steps[0]);
+    updateButtons();
+  }
+
+  function parseInput(){
+    const raw = arrayInput.value.split(',').map(s => s.trim()).filter(s => s.length);
+    const nums = raw.map(Number);
+    if(nums.length < 2 || nums.some(n => Number.isNaN(n))){
+      narration.textContent = 'Enter at least two numbers, separated by commas.';
+      return null;
+    }
+    return nums;
+  }
+
+  function step(){
+    if(stepIndex >= steps.length - 1){ stopPlaying(); return; }
+    stepIndex++;
+    render(steps[stepIndex]);
+    updateButtons();
+  }
+
+  function updateButtons(){
+    const atEnd = stepIndex >= steps.length - 1;
+    document.getElementById('stepBtn').disabled = atEnd;
+    document.getElementById('playBtn').disabled = atEnd;
+  }
+
+  function startPlaying(){
+    if(stepIndex >= steps.length - 1) return;
+    playing = true;
+    document.getElementById('playBtn').textContent = 'Pause';
+    tick();
+  }
+  function tick(){
+    if(!playing) return;
+    step();
+    if(stepIndex >= steps.length - 1){ stopPlaying(); return; }
+    playTimer = setTimeout(tick, Number(speedSlider.value));
+  }
+  function stopPlaying(){
+    playing = false;
+    clearTimeout(playTimer);
+    document.getElementById('playBtn').textContent = 'Play';
+  }
+
+  document.getElementById('applyBtn').addEventListener('click', () => {
+    const nums = parseInput();
+    if(nums){ stopPlaying(); loadArray(nums); }
+  });
+
+  document.getElementById('randomBtn').addEventListener('click', () => {
+    const n = 5 + Math.floor(Math.random() * 4);
+    const nums = Array.from({length:n}, () => Math.floor(Math.random() * 90) + 1);
+    arrayInput.value = nums.join(', ');
+    stopPlaying();
+    loadArray(nums);
+  });
+
+  document.getElementById('stepBtn').addEventListener('click', () => {
+    stopPlaying();
+    step();
+  });
+
+  document.getElementById('playBtn').addEventListener('click', () => {
+    if(playing){ stopPlaying(); } else { startPlaying(); }
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    stopPlaying();
+    loadArray(arr);
+  });
+
+  arrayInput.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){ document.getElementById('applyBtn').click(); }
+  });
+
+  // initial load
+  loadArray(parseInput());
+})();
+</script>
+
+</body>
+</html>
