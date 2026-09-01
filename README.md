@@ -4,7 +4,7 @@ A selection-sort variant that uses a **two-pointer sweep** (`sptr`, `eptr`)
 on each pass to find the element with the smallest *signed difference*
 relative to `sptr`, then places it correctly.
 
-**Live visualizer:** open [`index.html`](./index.html) in a browser to watch
+**Live visualizer:** open [`visualiser.html`](./visualiser.html) in a browser to watch
 the algorithm sort step-by-step, with `sptr`, `eptr`, and `minptr` highlighted
 on animated bars.
 
