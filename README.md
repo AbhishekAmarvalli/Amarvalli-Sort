@@ -1,9 +1,12 @@
-# AMARVALLI SORT
-## Custom Two-Pointer Selection Sort
+# Custom Two-Pointer Selection Sort
 
 A selection-sort variant that uses a **two-pointer sweep** (`sptr`, `eptr`)
 on each pass to find the element with the smallest *signed difference*
 relative to `sptr`, then places it correctly.
+
+**Live visualizer:** open [`index.html`](./index.html) in a browser to watch
+the algorithm sort step-by-step, with `sptr`, `eptr`, and `minptr` highlighted
+on animated bars.
 
 ---
 
@@ -71,7 +74,101 @@ arr[sptr]=9 > arr[minptr]=7 -> swap sptr & minptr directly
 Done. Sorted: [1, 2, 5, 7, 9]
 ```
 
-### Flow diagram
+### 2a. Main control flow
+
+```mermaid
+flowchart TD
+    A[Start: sptr = 0] --> B{sptr < n-1?}
+    B -- No --> Z[Done: array sorted]
+    B -- Yes --> C["eptr = n-1
+min_diff = arr(eptr) - arr(sptr)
+minptr = eptr
+eptr -= 1"]
+    C --> D{eptr != sptr?}
+    D -- Yes --> E["diff = arr(eptr) - arr(sptr)"]
+    E --> F{diff < min_diff?}
+    F -- Yes --> G["min_diff = diff
+minptr = eptr"]
+    F -- No --> H[eptr -= 1]
+    G --> H
+    H --> D
+    D -- No --> I{"arr(sptr) > arr(minptr)?"}
+    I -- Yes --> J["swap sptr, minptr"]
+    I -- No --> K["swap sptr+1, minptr"]
+    J --> L[sptr += 1]
+    K --> L
+    L --> B
+```
+
+### 2b. Inner scan loop, isolated
+
+```mermaid
+flowchart LR
+    S([Enter scan
+eptr = n-1]) --> INIT["min_diff = arr(eptr)-arr(sptr)
+minptr = eptr"]
+    INIT --> DEC1[eptr -= 1]
+    DEC1 --> CHK{eptr == sptr?}
+    CHK -- Yes --> EXIT([Exit scan])
+    CHK -- No --> CALC["diff = arr(eptr) - arr(sptr)"]
+    CALC --> CMP{diff < min_diff?}
+    CMP -- Yes --> UPD["min_diff = diff
+minptr = eptr"]
+    CMP -- No --> DEC2[eptr -= 1]
+    UPD --> DEC2
+    DEC2 --> CHK
+```
+
+### 2c. Placement decision
+
+```mermaid
+flowchart TD
+    P{"arr(sptr) > arr(minptr)?"}
+    P -- "Yes: minptr's value
+is smaller than sptr's own" --> D1["swap(sptr, minptr)
+value lands exactly at sptr"]
+    P -- "No: minptr's value
+is not smaller than sptr's own" --> D2["swap(sptr+1, minptr)
+value lands just after sptr"]
+    D1 --> N[sptr += 1, next pass]
+    D2 --> N
+```
+
+### 2d. Per-pass sequence (state across one full pass)
+
+```mermaid
+sequenceDiagram
+    participant Arr as arr[]
+    participant Sw as Sweep (eptr)
+    participant Dec as Decision
+
+    Note over Arr: sptr fixed for this pass
+    Sw->>Arr: read arr[eptr], arr[sptr]
+    Sw->>Sw: compute diff, compare to min_diff
+    loop while eptr != sptr
+        Sw->>Arr: read next arr[eptr]
+        Sw->>Sw: update min_diff / minptr if smaller
+    end
+    Sw->>Dec: hand off minptr, min_diff
+    Dec->>Arr: compare arr[sptr] vs arr[minptr]
+    Dec->>Arr: swap(sptr or sptr+1, minptr)
+    Note over Arr: index sptr is now placed
+```
+
+### 2e. Full sort as nested-loop state machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> PassStart
+    PassStart --> Scanning: eptr = n-1, init min_diff
+    Scanning --> Scanning: eptr -= 1 (diff checked each step)
+    Scanning --> Deciding: eptr == sptr
+    Deciding --> Placed: swap applied
+    Placed --> PassStart: sptr += 1, sptr < n-1
+    Placed --> [*]: sptr == n-1 (sorted)
+```
+
+### ASCII version (if Mermaid isn't rendered by your viewer)
 
 ```
         ┌───────────────────────────┐
@@ -123,6 +220,16 @@ Done. Sorted: [1, 2, 5, 7, 9]
 **Why `O(n²)`:** the outer loop runs `n-1` times (`sptr` from `0` to `n-2`).
 For each `sptr`, the inner `eptr` sweep runs `~(n - sptr - 1)` times.
 Summing: `(n-1) + (n-2) + ... + 1 = n(n-1)/2`, which is `O(n²)`.
+
+```mermaid
+flowchart LR
+    subgraph "Work per pass (shrinks by 1 each time)"
+    P0["sptr=0: n-1 comparisons"] --> P1["sptr=1: n-2 comparisons"]
+    P1 --> P2["sptr=2: n-3 comparisons"]
+    P2 --> Pn["... down to 1 comparison"]
+    end
+    Pn --> T["Total = n(n-1)/2 = O(n²)"]
+```
 
 This places it in the same complexity class as **selection sort**,
 **bubble sort**, and **insertion sort** — it does not achieve the
@@ -200,5 +307,32 @@ If you actually need better than `O(n²)`, the two-pointer *idea* doesn't extend
 
 ## 9. Code
 
-See [`custom_sort.py`](./custom_sort.py) for the implementation used to
-produce the traces above.
+Reference implementations, one file per language:
+
+| Language | File |
+|----------|------|
+| Python   | [`custom_sort.py`](./custom_sort.py) |
+| C        | [`custom_sort.c`](./custom_sort.c) |
+| C++      | [`custom_sort.cpp`](./custom_sort.cpp) |
+| Java     | [`CustomSort.java`](./CustomSort.java) |
+| Rust     | [`custom_sort.rs`](./custom_sort.rs) |
+
+All five implementations follow the exact same pointer logic described
+above and produce identical traces on the example array.
+
+---
+
+## 10. Visualizer
+
+[`index.html`](./index.html) is a self-contained, dependency-free page that
+animates the algorithm bar-by-bar:
+
+- **Load array** — type comma-separated numbers, or hit **Randomize**.
+- **Step** — advance one micro-step at a time (each `eptr` move, each
+  comparison, each swap is its own step).
+- **Play / Pause** — auto-advance at an adjustable speed.
+- Live readout of `sptr`, `eptr`, `minptr`, and the current `min_diff`,
+  plus a plain-language narration line for every step.
+- Color key: blue = `sptr`, teal = `eptr`, amber = `minptr`, green = placed.
+
+Open it directly in any browser — no build step or server required.
